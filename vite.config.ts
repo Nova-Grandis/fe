@@ -13,6 +13,12 @@ const dirname = import.meta.dirname
 // More info at: https://storybook.js.org/docs/next/writing-tests/integrations/vitest-addon
 export default defineConfig({
   plugins: [react(), vanillaExtractPlugin()],
+  // Faro에 보내는 앱 버전 — Vercel 빌드 커밋. 로컬 빌드는 'local'.
+  define: {
+    __APP_VERSION__: JSON.stringify(
+      process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) ?? 'local',
+    ),
+  },
   resolve: {
     alias: {
       // FSD 레이어별 별칭 — tsconfig.app.json의 paths와 같이 고친다.

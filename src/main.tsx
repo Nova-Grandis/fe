@@ -1,3 +1,7 @@
+// 실사용자 모니터링은 라우터가 만들어지기 전에 켜야 해서 가장 먼저 import한다.
+import './app/faro'
+import './app/amplitude'
+
 import { StrictMode } from 'react'
 
 import { QueryClientProvider } from '@tanstack/react-query'

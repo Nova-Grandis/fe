@@ -17,7 +17,10 @@
     "prepare": "husky"
   },
   "dependencies": {
+    "@amplitude/analytics-browser": "^2.48.0",
     "@fontsource/michroma": "^5.3.0",
+    "@grafana/faro-react": "^2.12.1",
+    "@grafana/faro-web-tracing": "^2.12.1",
     "@tanstack/react-query": "^5.104.0",
     "@tosspayments/tosspayments-sdk": "^2.8.1",
     "@vanilla-extract/css": "^1.21.2",

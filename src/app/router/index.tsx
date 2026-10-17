@@ -1,3 +1,4 @@
+import { withFaroRouterInstrumentation } from '@grafana/faro-react'
 import { createBrowserRouter, redirect } from 'react-router'
 
 import { AdminLayout } from '@app/layouts/AdminLayout'
@@ -56,7 +57,7 @@ import { hasSeenOnboarding } from '@widgets/onboarding'
 // 레이아웃과 ErrorPage는 어느 화면에서든 바로 필요해서 그대로 둔다.
 // 첫 진입 때 페이지 코드를 받는 짧은 동안은 아무것도 그리지 않는다(HydrateFallback) —
 // 지정하지 않아도 같지만 react-router가 경고를 남긴다.
-export const router = createBrowserRouter([
+const browserRouter = createBrowserRouter([
   // 자체 로고·건너뛰기를 가진 전체 화면이라 헤더·탭바를 그리는 RootLayout 밖에 둔다.
   {
     path: ONBOARDING_PATH,
@@ -398,3 +399,6 @@ export const router = createBrowserRouter([
     ],
   },
 ])
+
+// Faro가 페이지 이름을 경로 패턴(/preorders/:preorderId)으로 남기도록 감싼다(Faro가 꺼져 있으면 아무것도 보내지 않는다).
+export const router = withFaroRouterInstrumentation(browserRouter)

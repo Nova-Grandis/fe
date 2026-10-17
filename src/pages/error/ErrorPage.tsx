@@ -1,3 +1,6 @@
+import { useEffect } from 'react'
+
+import { faro } from '@grafana/faro-react'
 import { Globe } from 'lucide-react'
 import { useNavigate, useRouteError } from 'react-router'
 
@@ -13,6 +16,11 @@ export function ErrorPage() {
   const error = useRouteError()
   const navigate = useNavigate()
   const traceId = getTraceId(error)
+
+  // errorElement가 잡은 렌더 오류는 전역 오류로 올라가지 않아 Faro가 못 본다 — 직접 보낸다.
+  useEffect(() => {
+    if (error instanceof Error) faro.api?.pushError(error) // Faro가 꺼져 있으면 api가 없다
+  }, [error])
 
   return (
     <Container>

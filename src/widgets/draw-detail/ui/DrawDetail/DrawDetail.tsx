@@ -247,6 +247,10 @@ function DrawDetailBody({
 
             <ActionButton
               fullWidth
+              // 응모는 결제 화면의 '결제하고 응모하기'에서 한다 — 여기선 이미 한 응모의 결제만 이름을 단다.
+              data-faro-user-action-name={
+                view.cta.kind === 'pay' ? 'payment-request' : undefined
+              }
               disabled={view.cta.kind === 'none' || isEntryLoading || isPaying}
               onClick={onCta}
             >

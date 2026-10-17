@@ -18,6 +18,8 @@ export type OrderSummaryProps = {
   totalLabel?: string
   totalValue: string
   actionLabel: string
+  /** 실사용자 모니터링(Faro)에 남길 버튼 동작 이름 — data-faro-user-action-name */
+  actionName?: string
   onAction?: () => void
   actionDisabled?: boolean
   /** 어두운 화면(결제 페이지)의 그라데이션 버튼(ActionButton)으로 바꾼다. 장바구니는 아직 밝은 화면이라 기본 Button. */
@@ -33,6 +35,7 @@ export function OrderSummary({
   totalLabel = '총 결제 금액',
   totalValue,
   actionLabel,
+  actionName,
   onAction,
   actionDisabled,
   darkAction,
@@ -76,12 +79,18 @@ export function OrderSummary({
 
       <div className={styles.actionRow}>
         {darkAction ? (
-          <ActionButton fullWidth disabled={actionDisabled} onClick={onAction}>
+          <ActionButton
+            fullWidth
+            data-faro-user-action-name={actionName}
+            disabled={actionDisabled}
+            onClick={onAction}
+          >
             {actionLabel}
           </ActionButton>
         ) : (
           <Button
             className={styles.action}
+            data-faro-user-action-name={actionName}
             disabled={actionDisabled}
             onClick={onAction}
           >

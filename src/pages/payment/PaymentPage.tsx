@@ -536,6 +536,7 @@ export function PaymentPage() {
             totalLabel="결제 예정 금액"
             totalValue={formatWon(totalAmount)}
             actionLabel={`${formatWon(totalAmount)} ${drawId ? '결제하고 응모하기' : '결제하기'}`}
+            actionName={drawId ? 'draw-apply' : 'payment-request'}
             actionDisabled={!requiredAgreed || !payable || isPaying}
             darkAction
             onAction={() => void handlePayment()}

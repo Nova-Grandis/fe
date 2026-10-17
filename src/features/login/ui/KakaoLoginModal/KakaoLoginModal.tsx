@@ -23,6 +23,7 @@ export function KakaoLoginModal({ returnTo }: KakaoLoginModalProps) {
       {error && <InlineAlert status="error">{error}</InlineAlert>}
       <button
         type="button"
+        data-faro-user-action-name="login-kakao"
         className={[typography.button.mdBold, styles.kakaoButton].join(' ')}
         onClick={() => {
           try {

@@ -176,6 +176,7 @@ export function ProductPurchaseBar({
                   size="md"
                   iconOnly
                   aria-label="장바구니"
+                  data-faro-user-action-name="cart-add"
                   onClick={onAddToCart}
                   disabled={addToCartDisabled}
                 />
@@ -183,6 +184,10 @@ export function ProductPurchaseBar({
               <ActionButton
                 size="md"
                 className={styles.orderBarCheckoutButton}
+                // 사전예약은 입장권 유무로 대기열·신청이 갈려 usePreorderSubmit이 이름을 단다.
+                data-faro-user-action-name={
+                  isPreorder ? undefined : 'order-buy-now'
+                }
                 onClick={onCheckout}
                 disabled={checkoutDisabled}
               >

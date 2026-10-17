@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 
+import { faro } from '@grafana/faro-react'
 import { useNavigate } from 'react-router'
 
 import { useSubmitPreorder, type PreorderAccepted } from '@entities/preorder'
@@ -57,9 +58,12 @@ export function usePreorderSubmit() {
       admission.productId !== productId ||
       admission.expiresAt <= Date.now()
     ) {
+      // 같은 '사전예약하기' 버튼이 입장권 유무로 갈려서 버튼 속성 대신 여기서 동작 이름을 단다(Faro가 꺼져 있으면 api가 없다).
+      faro.api?.startUserAction('queue-enter')
       joinPreorderQueue({ productId, productName, to: returnTo })
       return
     }
+    faro.api?.startUserAction('preorder-apply')
     submit.mutate(
       {
         productId,

@@ -660,6 +660,13 @@ export function AdminDeadLetterList({ header }: AdminDeadLetterListProps) {
             rowKey={(item) => item.deadLetterId}
             // 기록 탭은 쪽을 나누지 않고 내리는 만큼 이어 붙인다.
             pageSize={complete ? 10 : undefined}
+            // 기록 탭은 줄이 수천 개까지 쌓이는데, 자동 갱신마다 화면이 다시 그려지며 바뀌지 않은
+            // 줄까지 전부 다시 그렸다. 칸·클릭이 쓰는 바깥 값이 바뀔 때만 다시 그린다.
+            rowDeps={
+              complete
+                ? undefined
+                : [selected, redrive.isPending, now, service, location.search]
+            }
             onRowClick={openDetail}
             loading={deadLetters.isPending}
             emptyMessage={

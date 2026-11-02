@@ -1,4 +1,10 @@
-import { useRef, useState, type HTMLAttributes, type ReactNode } from 'react'
+import {
+  memo,
+  useRef,
+  useState,
+  type HTMLAttributes,
+  type ReactNode,
+} from 'react'
 
 import { ChevronRight } from 'lucide-react'
 
@@ -57,11 +63,67 @@ export type TableProps<T> = {
   ) => Omit<HTMLAttributes<HTMLTableRowElement>, 'className' | 'onClick'>
   /** 행 순서가 바뀌면 옛 자리에서 새 자리로 미끄러지게 한다(끌어서 순서 바꾸기) */
   animateRowMoves?: boolean
+  /**
+   * 주면 행을 기억해 두고, 행 데이터(row)나 이 값들이 바뀔 때만 다시 그린다. 칸·클릭이 쓰는 바깥
+   * 값(고른 것, 지금 시각, 돌아갈 주소 등)을 빠짐없이 넣는다 — 빠지면 그 값이 바뀌어도 행이 그대로다.
+   * 행이 수백 개 넘게 쌓이고 위에서 자주 다시 그려지는 표(자동 갱신)에만 쓴다.
+   */
+  rowDeps?: readonly unknown[]
   className?: string
 }
 
 const ACTION_COLUMN_KEY = 'table-row-action'
 const DEFAULT_LOADING_ROWS = 5
+
+type TableRowProps<T> = Pick<
+  TableProps<T>,
+  'onRowClick' | 'rowClassName' | 'rowProps' | 'rowDeps'
+> & {
+  row: T
+  columns: TableColumn<T>[]
+}
+
+function TableRowBase<T>({
+  row,
+  columns,
+  onRowClick,
+  rowClassName,
+  rowProps,
+}: TableRowProps<T>) {
+  return (
+    <tr
+      {...rowProps?.(row)}
+      className={[
+        styles.row,
+        onRowClick && styles.rowClickable,
+        rowClassName?.(row),
+      ]
+        .filter(Boolean)
+        .join(' ')}
+      onClick={onRowClick && (() => onRowClick(row))}
+    >
+      {columns.map(({ key, render, align = 'left' }) => (
+        <td key={key} className={styles.cell[align]}>
+          {render(row)}
+        </td>
+      ))}
+    </tr>
+  )
+}
+
+const sameDeps = (a: readonly unknown[], b: readonly unknown[]) =>
+  a.length === b.length && a.every((value, index) => Object.is(value, b[index]))
+
+// rowDeps가 없으면 지금처럼 늘 다시 그린다. 있으면 행과 rowDeps만 비교한다 — columns·콜백은
+// 렌더마다 새로 만들어져 비교하면 늘 다르다.
+const TableRow = memo(
+  TableRowBase,
+  (prev, next) =>
+    next.rowDeps !== undefined &&
+    prev.rowDeps !== undefined &&
+    prev.row === next.row &&
+    sameDeps(prev.rowDeps, next.rowDeps),
+) as <T>(props: TableRowProps<T>) => ReactNode
 
 export function Table<T>({
   columns,
@@ -76,6 +138,7 @@ export function Table<T>({
   rowClassName,
   rowProps,
   animateRowMoves = false,
+  rowDeps,
   className,
 }: TableProps<T>) {
   const tbodyRef = useRef<HTMLTableSectionElement>(null)
@@ -172,24 +235,15 @@ export function Table<T>({
               </tr>
             ) : (
               visibleRows.map((row) => (
-                <tr
+                <TableRow
                   key={rowKey(row)}
-                  {...rowProps?.(row)}
-                  className={[
-                    styles.row,
-                    onRowClick && styles.rowClickable,
-                    rowClassName?.(row),
-                  ]
-                    .filter(Boolean)
-                    .join(' ')}
-                  onClick={onRowClick && (() => onRowClick(row))}
-                >
-                  {allColumns.map(({ key, render, align = 'left' }) => (
-                    <td key={key} className={styles.cell[align]}>
-                      {render(row)}
-                    </td>
-                  ))}
-                </tr>
+                  row={row}
+                  columns={allColumns}
+                  onRowClick={onRowClick}
+                  rowClassName={rowClassName}
+                  rowProps={rowProps}
+                  rowDeps={rowDeps}
+                />
               ))
             )}
           </tbody>

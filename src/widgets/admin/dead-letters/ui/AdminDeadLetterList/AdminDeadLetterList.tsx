@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useEffectEvent, useState } from 'react'
 
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router'
 
@@ -18,7 +18,9 @@ import {
   groupDeadLetters,
   toDeadLetterService,
   useDeadLetterCounts,
+  useDeadLetterHistory,
   useDeadLetters,
+  useNewDeadLetters,
   useRedriveDeadLetters,
   type DeadLetter,
   type DeadLetterFailureReason,
@@ -46,7 +48,9 @@ import { formatDotDateTime } from '@shared/lib/formatDotDate'
 import { formatNumber } from '@shared/lib/formatNumber'
 import { periodRange, toPeriodOptions, type Period } from '@shared/lib/period'
 import { toggleInSet } from '@shared/lib/toggleInSet'
+import { useEndReached } from '@shared/lib/useEndReached'
 import { useNow } from '@shared/lib/useNow'
+import { useScrolledPast } from '@shared/lib/useScrolledPast'
 import { closeModal, openModal } from '@shared/model/modalStore'
 import {
   Button,
@@ -62,13 +66,12 @@ import {
 } from '@shared/ui'
 import type { DropdownOption, PageHeaderProps, TableColumn } from '@shared/ui'
 
+import { useScrollMemory } from '../../lib/useScrollMemory'
 import { DeadLetterGroups } from '../DeadLetterGroups'
 
 import * as styles from './AdminDeadLetterList.css'
 
-// 기록 탭(처리됨·버림·전체)은 최근 100건만 받는다(서버 한 쪽 상한) — 지난 기록이라 최근 것만
-// 보면 된다. 넘치면 화면에 "최근 100건"이라고 알린다.
-const PAGE_SIZE = 100
+// 기록 탭(처리됨·다시 실패·버림·전체)은 끝까지 내리면 다음 쪽을 이어 받는다(useDeadLetterHistory).
 // 손댈 것만 모은 탭은 상태마다 끝까지 받는다 — 한 쪽만 보면 오래 멈춘 메시지가 빠지고 원인별
 // 묶음 수·묶음째 되돌리기가 일부만 된다.
 const COMPLETE_TABS: readonly DeadLetterTab[] = ['open', 'waiting']
@@ -173,13 +176,51 @@ export function AdminDeadLetterList({ header }: AdminDeadLetterListProps) {
   }
   const complete = COMPLETE_TABS.includes(tab.value)
   const statuses: readonly DeadLetterStatus[] = tab.statuses
-  const deadLetters = useDeadLetters(
+  // 탭에 맞는 하나만 돈다 — 손댈 탭은 끝까지 한 번에, 기록 탭은 내리는 만큼.
+  const completeList = useDeadLetters(
     service,
-    complete
-      ? { ...filters, statuses }
-      : { ...filters, status: statuses[0], size: PAGE_SIZE },
+    { ...filters, statuses },
     refreshInterval,
+    complete,
   )
+  const historyParams = { ...filters, status: statuses[0] }
+  const history = useDeadLetterHistory(service, historyParams, !complete)
+  const deadLetters = complete ? completeList : history
+  // 기록 탭은 펼친 쪽을 다시 받지 않고, 맨 앞 쪽만 물어 새 실패를 알아챈다.
+  const fresh = useNewDeadLetters(
+    service,
+    historyParams,
+    refreshInterval,
+    !complete,
+    history.data?.items ?? [],
+  )
+  // 마지막 갱신·새로 고침·갱신 실패 안내는 손댈 탭은 목록, 기록 탭은 새 실패 확인을 따른다.
+  const live = complete ? completeList : fresh
+  const endRef = useEndReached<HTMLDivElement>(
+    // 다음 쪽이 실패하면 멈춘다 — 끝이 보이는 채라 켜 두면 실패하자마자 또 보낸다.
+    !complete &&
+      history.hasNextPage &&
+      !history.isFetchingNextPage &&
+      !history.isFetchNextPageError,
+    () => void history.fetchNextPage(),
+  )
+
+  // 표 맨 위를 지나 내려가 읽는 중이면 새 실패를 끼우지 않고 알리기만 한다 — 끼우면 보던 줄이
+  // 밀린다. 맨 위를 보고 있으면 바로 붙인다.
+  const { ref: tableTopRef, past: readingBelow } =
+    useScrolledPast<HTMLDivElement>()
+  const newCount = fresh.pending.length
+  const applyNew = useEffectEvent(() => fresh.apply())
+  useEffect(() => {
+    if (complete || readingBelow || history.isFetchingNextPage) return
+    if (newCount > 0 || fresh.gap) applyNew()
+  }, [complete, readingBelow, newCount, fresh.gap, history.isFetchingNextPage])
+
+  const { ref: listRef, remember: rememberScroll } =
+    useScrollMemory<HTMLDivElement>(
+      location.pathname + location.search,
+      !complete && history.data !== undefined,
+    )
   // 탭 숫자도 같은 이벤트·실패 이유로 센다 — 거른 목록 옆에 거르기 전 숫자가 붙지 않게.
   const counts = useDeadLetterCounts(service, filters, refreshInterval)
   const redrive = useRedriveDeadLetters(service)
@@ -208,10 +249,11 @@ export function AdminDeadLetterList({ header }: AdminDeadLetterListProps) {
           a.createdAt.localeCompare(b.createdAt),
         )
       : deadLetters.data?.items
-  // 받은 것보다 많으면 일부만 보이는 것 — 기록 탭은 최근 100건, 손댈 탭은 상한(상태마다 1,000건).
+  // 손댈 탭이 상한(상태마다 1,000건)에 걸려 일부만 받은 것. 기록 탭은 내리면 더 받으니 해당 없다.
   const partial =
-    deadLetters.data !== undefined &&
-    deadLetters.data.total > deadLetters.data.items.length
+    complete &&
+    completeList.data !== undefined &&
+    completeList.data.total > completeList.data.items.length
   const groups = tab.value === 'open' ? groupDeadLetters(items ?? []) : []
   const redrivable = (items ?? []).filter((item) => item.redrivable)
   const selectedIds = redrivable
@@ -425,8 +467,8 @@ export function AdminDeadLetterList({ header }: AdminDeadLetterListProps) {
         {...header}
         aside={
           <RefreshStatus
-            updatedAt={deadLetters.dataUpdatedAt}
-            onRefresh={() => void deadLetters.refetch()}
+            updatedAt={live.dataUpdatedAt}
+            onRefresh={() => void live.refetch()}
           >
             <Dropdown
               label="자동 갱신 간격"
@@ -437,7 +479,7 @@ export function AdminDeadLetterList({ header }: AdminDeadLetterListProps) {
               // 고르는 즉시 한 번 받는다 — 새 간격을 기다리지 않고 지금 값을 보여준다.
               onSelect={(next) => {
                 setRefreshInterval(next)
-                void deadLetters.refetch()
+                void live.refetch()
               }}
             />
           </RefreshStatus>
@@ -486,24 +528,20 @@ export function AdminDeadLetterList({ header }: AdminDeadLetterListProps) {
       </div>
 
       {/* 다시 받기가 실패해도 이전 목록은 남는다 — 멈춘 목록을 최신으로 읽지 않게 알린다. */}
-      {pollingError(deadLetters) !== null && (
+      {pollingError(live) !== null && (
         <InlineAlert status={items ? 'warning' : 'error'}>
-          {getErrorMessage(
-            pollingError(deadLetters),
-            '메시지를 불러오지 못했습니다.',
-          )}
+          {getErrorMessage(pollingError(live), '메시지를 불러오지 못했습니다.')}
           {items && ' 아래 목록은 마지막으로 받은 값입니다.'}
         </InlineAlert>
       )}
       {feedback && (
         <InlineAlert status={feedback.status}>{feedback.message}</InlineAlert>
       )}
-      {partial && deadLetters.data && (
+      {partial && completeList.data && (
         <InlineAlert status="warning">
-          {formatNumber(deadLetters.data.total)}건 중{' '}
-          {complete
-            ? `${formatNumber(deadLetters.data.items.length)}건만 받았어요. 원인별 묶음·되돌리기도 받은 것만 셉니다.`
-            : `최근 ${formatNumber(deadLetters.data.items.length)}건만 보여요.`}
+          {formatNumber(completeList.data.total)}건 중{' '}
+          {formatNumber(completeList.data.items.length)}건만 받았어요. 원인별
+          묶음·되돌리기도 받은 것만 셉니다.
         </InlineAlert>
       )}
 
@@ -593,28 +631,78 @@ export function AdminDeadLetterList({ header }: AdminDeadLetterListProps) {
           </div>
         )}
 
-        <Table
-          columns={columns}
-          rows={items ?? []}
-          rowKey={(item) => item.deadLetterId}
-          pageSize={10}
-          onRowClick={openDetail}
-          loading={deadLetters.isPending}
-          emptyMessage={
-            deadLetters.isError
-              ? '메시지를 불러오지 못했습니다.'
-              : tab.value === 'open'
-                ? '멈춘 메시지가 없어요. 평소엔 이게 정상이에요.'
-                : '조건에 맞는 메시지가 없습니다.'
-          }
-        />
+        {/* 표 안을 누를 때(상세·관련 예약으로 갈 때) 스크롤 위치를 적어 둔다. 표식·알림은 표
+            밖에 둔다 — 표 칸은 가로 스크롤이라 그 안에선 본문 대신 표 칸을 스크롤 영역으로 잡는다. */}
+        <div
+          ref={listRef}
+          className={styles.list}
+          onClickCapture={complete ? undefined : rememberScroll}
+        >
+          <div ref={tableTopRef} />
+          {!complete && readingBelow && (newCount > 0 || fresh.gap) && (
+            <div className={styles.newDock}>
+              <Button
+                size="small"
+                className={styles.newButton}
+                onClick={() =>
+                  listRef.current?.scrollIntoView({ block: 'start' })
+                }
+              >
+                새 실패{' '}
+                {fresh.gap ? '100건 넘게' : `${formatNumber(newCount)}건`} · 맨
+                위로
+              </Button>
+            </div>
+          )}
+          <Table
+            columns={columns}
+            rows={items ?? []}
+            rowKey={(item) => item.deadLetterId}
+            // 기록 탭은 쪽을 나누지 않고 내리는 만큼 이어 붙인다.
+            pageSize={complete ? 10 : undefined}
+            // 기록 탭은 줄이 수천 개까지 쌓이는데, 자동 갱신마다 화면이 다시 그려지며 바뀌지 않은
+            // 줄까지 전부 다시 그렸다. 칸·클릭이 쓰는 바깥 값이 바뀔 때만 다시 그린다.
+            rowDeps={
+              complete
+                ? undefined
+                : [selected, redrive.isPending, now, service, location.search]
+            }
+            onRowClick={openDetail}
+            loading={deadLetters.isPending}
+            emptyMessage={
+              deadLetters.isError
+                ? '메시지를 불러오지 못했습니다.'
+                : tab.value === 'open'
+                  ? '멈춘 메시지가 없어요. 평소엔 이게 정상이에요.'
+                  : '조건에 맞는 메시지가 없습니다.'
+            }
+          />
+          {/* 표 끝이 보이면 다음 쪽을 받는다. */}
+          {!complete && history.hasNextPage && (
+            <div ref={endRef} className={styles.listEnd} role="status">
+              {history.isFetchNextPageError ? (
+                <>
+                  이전 메시지를 불러오지 못했어요.{' '}
+                  <Button
+                    size="small"
+                    variant="outline"
+                    onClick={() => void history.fetchNextPage()}
+                  >
+                    다시 불러오기
+                  </Button>
+                </>
+              ) : history.isFetchingNextPage ? (
+                '이전 메시지를 더 불러오는 중…'
+              ) : (
+                `전체 ${formatNumber(history.data?.total ?? 0)}건 중 ${formatNumber(items?.length ?? 0)}건 · 내리면 더 불러와요`
+              )}
+            </div>
+          )}
+        </div>
       </Panel>
 
       <div className={styles.subText}>
         받은 횟수 = DLQ로 오기 전까지 서버가 처리하려고 받은 횟수.
-        {deadLetters.data &&
-          deadLetters.data.total > PAGE_SIZE &&
-          ` 전체 ${formatNumber(deadLetters.data.total)}건 중 최근 ${PAGE_SIZE}건만 보입니다. 조건을 좁혀 주세요.`}
       </div>
     </div>
   )

@@ -18,11 +18,20 @@ export async function startMockWorker() {
   const { startWorker } = await import('./browser')
   await startWorker()
   // 주소에 ?mockScenario=open 을 붙여 열면 오픈 상황(사전예약 3개 · 5,000명 · 실패 5%)을 흉내 낸다.
+  // ?mockScenario=dlq 는 이벤트 DLQ 장애(지난 24시간 600건 + 5초마다 새 실패 2건). &mockCount=로 건수를 바꾼다.
   // 새로 고치면 목 데이터가 처음으로 돌아가므로 다시 붙여 연다.
-  if (
-    new URLSearchParams(window.location.search).get('mockScenario') === 'open'
-  ) {
+  const params = new URLSearchParams(window.location.search)
+  const scenario = params.get('mockScenario')
+  if (scenario === 'open') {
     const { startOpenScenario } = await import('./openScenario')
     startOpenScenario()
+  }
+  if (scenario === 'dlq') {
+    const { startDeadLetterScenario } = await import('./deadLetterScenario')
+    // 손으로 고친 값(0, 음수, 글자)은 기본 건수로 둔다.
+    const count = Number(params.get('mockCount'))
+    startDeadLetterScenario(
+      Number.isInteger(count) && count > 0 ? count : undefined,
+    )
   }
 }

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 
 /** 세로로 스크롤되는 가장 가까운 조상 — 관리자 화면은 본문 영역이 스크롤된다. 없으면 null(창) */
-function scrollParentOf(element: HTMLElement) {
+export function scrollParentOf(element: HTMLElement) {
   for (let node = element.parentElement; node; node = node.parentElement) {
     const { overflowY } = getComputedStyle(node)
     if (overflowY === 'auto' || overflowY === 'scroll') return node

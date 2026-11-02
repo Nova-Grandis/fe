@@ -31,6 +31,7 @@ import {
 } from '@shared/config/routes'
 import { formatNumber } from '@shared/lib/formatNumber'
 import { slopePerSecond } from '@shared/lib/samples'
+import { useScrolledPast } from '@shared/lib/useScrolledPast'
 import { InlineAlert, RefreshStatus, Skeleton, SkeletonGroup } from '@shared/ui'
 
 import { ORDER_SUMMARY_STEPS } from '../../lib/orderSummary'
@@ -39,7 +40,6 @@ import {
   type ReconcileSummary,
 } from '../../lib/reconcileSummary'
 import { useReprocessRun } from '../../lib/useReprocessRun'
-import { useScrolledPast } from '../../lib/useScrolledPast'
 import { DrawSummaryCard } from '../DrawSummaryCard'
 import { OpenPreorderCard } from '../OpenPreorderCard'
 import { OpsKpiCard } from '../OpsKpiCard'

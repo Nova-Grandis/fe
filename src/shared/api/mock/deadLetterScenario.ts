@@ -6,7 +6,8 @@ import type { DeadLetterDetail, DeadLetterStatus } from '../types'
 // 거슬러 읽는 동안 새 실패가 계속 쌓이는 상황을 만든다.
 //   지난 24시간에 예약 DLQ 600건을 깐다. 그중 대부분은 약 3시간 전 1시간 동안 몰린 장애다.
 //   장애는 아직 진행 중이라 5초마다 새 실패(처리 대기)가 2건씩 맨 앞에 쌓인다.
-const SEED_COUNT = 600
+//   &mockCount=3000 처럼 건수를 바꿔 줄이 많을 때를 본다(렌더링 비용 측정).
+const DEFAULT_SEED_COUNT = 600
 const BURST_SHARE = 0.8
 const HOUR = 60 * 60 * 1000
 const BURST_START_MS = 3 * HOUR
@@ -73,19 +74,19 @@ const deadLetterAt = (
 
 let timer: ReturnType<typeof setInterval> | null = null
 
-export function startDeadLetterScenario() {
+export function startDeadLetterScenario(seedCount = DEFAULT_SEED_COUNT) {
   if (timer) return
   const now = Date.now()
-  const burst = Math.round(SEED_COUNT * BURST_SHARE)
-  for (let index = 0; index < SEED_COUNT; index += 1) {
+  const burst = Math.round(seedCount * BURST_SHARE)
+  for (let index = 0; index < seedCount; index += 1) {
     // 장애 구간은 고르게 빽빽하게, 나머지는 하루에 흩는다.
     const agoMs =
       index < burst
         ? BURST_START_MS - (index / burst) * BURST_LENGTH_MS
-        : ((index - burst + 1) / (SEED_COUNT - burst)) * DAY
+        : ((index - burst + 1) / (seedCount - burst)) * DAY
     deadLetterStore.push(deadLetterAt(index, now - agoMs, statusOf(index)))
   }
-  let next = SEED_COUNT
+  let next = seedCount
   timer = setInterval(() => {
     for (let count = 0; count < ARRIVE_PER_TICK; count += 1) {
       deadLetterStore.push(deadLetterAt(next, Date.now(), 'OPEN'))

@@ -3,6 +3,7 @@
 export {
   useDeadLetter,
   useDeadLetterCounts,
+  useDeadLetterHistory,
   useDeadLetters,
   useDiscardDeadLetter,
   useRedriveDeadLetter,

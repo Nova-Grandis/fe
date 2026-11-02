@@ -18,6 +18,7 @@ import {
   groupDeadLetters,
   toDeadLetterService,
   useDeadLetterCounts,
+  useDeadLetterHistory,
   useDeadLetters,
   useRedriveDeadLetters,
   type DeadLetter,
@@ -46,6 +47,7 @@ import { formatDotDateTime } from '@shared/lib/formatDotDate'
 import { formatNumber } from '@shared/lib/formatNumber'
 import { periodRange, toPeriodOptions, type Period } from '@shared/lib/period'
 import { toggleInSet } from '@shared/lib/toggleInSet'
+import { useEndReached } from '@shared/lib/useEndReached'
 import { useNow } from '@shared/lib/useNow'
 import { closeModal, openModal } from '@shared/model/modalStore'
 import {
@@ -66,9 +68,7 @@ import { DeadLetterGroups } from '../DeadLetterGroups'
 
 import * as styles from './AdminDeadLetterList.css'
 
-// 기록 탭(처리됨·버림·전체)은 최근 100건만 받는다(서버 한 쪽 상한) — 지난 기록이라 최근 것만
-// 보면 된다. 넘치면 화면에 "최근 100건"이라고 알린다.
-const PAGE_SIZE = 100
+// 기록 탭(처리됨·다시 실패·버림·전체)은 끝까지 내리면 다음 쪽을 이어 받는다(useDeadLetterHistory).
 // 손댈 것만 모은 탭은 상태마다 끝까지 받는다 — 한 쪽만 보면 오래 멈춘 메시지가 빠지고 원인별
 // 묶음 수·묶음째 되돌리기가 일부만 된다.
 const COMPLETE_TABS: readonly DeadLetterTab[] = ['open', 'waiting']
@@ -173,12 +173,23 @@ export function AdminDeadLetterList({ header }: AdminDeadLetterListProps) {
   }
   const complete = COMPLETE_TABS.includes(tab.value)
   const statuses: readonly DeadLetterStatus[] = tab.statuses
-  const deadLetters = useDeadLetters(
+  // 탭에 맞는 하나만 돈다 — 손댈 탭은 끝까지 한 번에, 기록 탭은 내리는 만큼.
+  const completeList = useDeadLetters(
     service,
-    complete
-      ? { ...filters, statuses }
-      : { ...filters, status: statuses[0], size: PAGE_SIZE },
+    { ...filters, statuses },
     refreshInterval,
+    complete,
+  )
+  const history = useDeadLetterHistory(
+    service,
+    { ...filters, status: statuses[0] },
+    refreshInterval,
+    !complete,
+  )
+  const deadLetters = complete ? completeList : history
+  const endRef = useEndReached<HTMLDivElement>(
+    !complete && history.hasNextPage && !history.isFetchingNextPage,
+    () => void history.fetchNextPage(),
   )
   // 탭 숫자도 같은 이벤트·실패 이유로 센다 — 거른 목록 옆에 거르기 전 숫자가 붙지 않게.
   const counts = useDeadLetterCounts(service, filters, refreshInterval)
@@ -208,10 +219,11 @@ export function AdminDeadLetterList({ header }: AdminDeadLetterListProps) {
           a.createdAt.localeCompare(b.createdAt),
         )
       : deadLetters.data?.items
-  // 받은 것보다 많으면 일부만 보이는 것 — 기록 탭은 최근 100건, 손댈 탭은 상한(상태마다 1,000건).
+  // 손댈 탭이 상한(상태마다 1,000건)에 걸려 일부만 받은 것. 기록 탭은 내리면 더 받으니 해당 없다.
   const partial =
-    deadLetters.data !== undefined &&
-    deadLetters.data.total > deadLetters.data.items.length
+    complete &&
+    completeList.data !== undefined &&
+    completeList.data.total > completeList.data.items.length
   const groups = tab.value === 'open' ? groupDeadLetters(items ?? []) : []
   const redrivable = (items ?? []).filter((item) => item.redrivable)
   const selectedIds = redrivable
@@ -498,12 +510,11 @@ export function AdminDeadLetterList({ header }: AdminDeadLetterListProps) {
       {feedback && (
         <InlineAlert status={feedback.status}>{feedback.message}</InlineAlert>
       )}
-      {partial && deadLetters.data && (
+      {partial && completeList.data && (
         <InlineAlert status="warning">
-          {formatNumber(deadLetters.data.total)}건 중{' '}
-          {complete
-            ? `${formatNumber(deadLetters.data.items.length)}건만 받았어요. 원인별 묶음·되돌리기도 받은 것만 셉니다.`
-            : `최근 ${formatNumber(deadLetters.data.items.length)}건만 보여요.`}
+          {formatNumber(completeList.data.total)}건 중{' '}
+          {formatNumber(completeList.data.items.length)}건만 받았어요. 원인별
+          묶음·되돌리기도 받은 것만 셉니다.
         </InlineAlert>
       )}
 
@@ -597,7 +608,8 @@ export function AdminDeadLetterList({ header }: AdminDeadLetterListProps) {
           columns={columns}
           rows={items ?? []}
           rowKey={(item) => item.deadLetterId}
-          pageSize={10}
+          // 기록 탭은 쪽을 나누지 않고 내리는 만큼 이어 붙인다.
+          pageSize={complete ? 10 : undefined}
           onRowClick={openDetail}
           loading={deadLetters.isPending}
           emptyMessage={
@@ -608,13 +620,18 @@ export function AdminDeadLetterList({ header }: AdminDeadLetterListProps) {
                 : '조건에 맞는 메시지가 없습니다.'
           }
         />
+        {/* 표 끝이 보이면 다음 쪽을 받는다. */}
+        {!complete && history.hasNextPage && (
+          <div ref={endRef} className={styles.subText} role="status">
+            {history.isFetchingNextPage
+              ? '이전 메시지를 더 불러오는 중…'
+              : `전체 ${formatNumber(history.data?.total ?? 0)}건 중 ${formatNumber(items?.length ?? 0)}건 · 내리면 더 불러와요`}
+          </div>
+        )}
       </Panel>
 
       <div className={styles.subText}>
         받은 횟수 = DLQ로 오기 전까지 서버가 처리하려고 받은 횟수.
-        {deadLetters.data &&
-          deadLetters.data.total > PAGE_SIZE &&
-          ` 전체 ${formatNumber(deadLetters.data.total)}건 중 최근 ${PAGE_SIZE}건만 보입니다. 조건을 좁혀 주세요.`}
       </div>
     </div>
   )

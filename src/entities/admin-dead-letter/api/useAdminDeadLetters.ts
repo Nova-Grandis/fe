@@ -1,10 +1,12 @@
 import {
+  useInfiniteQuery,
   useMutation,
   useQueries,
   useQuery,
   useQueryClient,
 } from '@tanstack/react-query'
 
+import { PAGE_SIZE_MAX } from '@shared/api/fetchAllPages'
 import { pollEvery, pollingRetry, queryPolicy } from '@shared/api/queryPolicy'
 import type {
   DeadLetterDetail,
@@ -62,6 +64,7 @@ export const useDeadLetters = (
   service: DeadLetterService,
   params: DeadLetterQuery = {},
   intervalMs?: RefreshInterval,
+  enabled = true,
 ) => {
   const queryClient = useQueryClient()
   const queryKey = [...DEAD_LETTERS_KEY, service, 'list', params] as const
@@ -84,9 +87,45 @@ export const useDeadLetters = (
         ? getDeadLettersOf(service, statuses, listParams, signal)
         : getDeadLetters(service, listParams, signal)
     },
+    enabled,
     ...queryPolicy.live,
     refetchInterval: ({ state: { data } }) => pollMs(data) ?? false,
     ...pollingRetry(() => pollMs(queryClient.getQueryData(queryKey))),
+  })
+}
+
+/**
+ * 기록 탭(처리됨·다시 실패·버림·전체) 목록 — 최신순으로 한 쪽(100건)씩, 끝까지 내리면 다음 쪽을
+ * 이어 받는다. 장애 때 실패가 시작된 시각까지 거슬러 읽어야 해서 최근 몇 건으로 자르지 않는다.
+ */
+// shortcut: 자동 갱신 때 받은 쪽을 모두 다시 받고, 받는 사이 새 실패가 앞에 쌓여 밀린 줄을 거르지 않는다 — 측정 후 고친다.
+export const useDeadLetterHistory = (
+  service: DeadLetterService,
+  params: Omit<DeadLetterListParams, 'page' | 'size'>,
+  intervalMs: RefreshInterval,
+  enabled: boolean,
+) => {
+  const queryClient = useQueryClient()
+  const queryKey = [...DEAD_LETTERS_KEY, service, 'history', params] as const
+  return useInfiniteQuery({
+    queryKey,
+    queryFn: ({ pageParam, signal }) =>
+      getDeadLetters(
+        service,
+        { ...params, page: pageParam, size: PAGE_SIZE_MAX },
+        signal,
+      ),
+    initialPageParam: 0,
+    getNextPageParam: ({ page, size, total }) =>
+      (page + 1) * size < total ? page + 1 : undefined,
+    // 화면은 쪽 구분 없이 한 목록으로 본다. 전체 건수는 가장 최근에 받은 첫 쪽의 값이다.
+    select: ({ pages }) => ({
+      items: pages.flatMap((page) => page.items),
+      total: pages[0]?.total ?? 0,
+    }),
+    enabled,
+    ...queryPolicy.live,
+    ...pollEvery(queryClient, queryKey, intervalMs),
   })
 }
 

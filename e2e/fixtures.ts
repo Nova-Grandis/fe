@@ -321,9 +321,12 @@ export async function expectSingleNewReservation(page: Page) {
 
 // ── 관리자 ────────────────────────────────────────────────
 
-/** 로컬 목 관리자 계정(admin / admin1234)으로 로그인한다. 회원 로그인은 풀린다. */
-export async function loginAsAdmin(page: Page) {
-  await page.goto('/admin/login')
+/**
+ * 로컬 목 관리자 계정(admin / admin1234)으로 로그인한다. 회원 로그인은 풀린다.
+ * search로 목 시나리오를 켠다(예: '?mockScenario=dlq') — 시나리오는 앱을 처음 열 때만 읽는다.
+ */
+export async function loginAsAdmin(page: Page, search = '') {
+  await page.goto(`/admin/login${search}`)
   await page.getByLabel('아이디').fill('admin')
   await page.getByLabel('비밀번호').fill('admin1234')
   await page.getByRole('button', { name: '로그인', exact: true }).click()

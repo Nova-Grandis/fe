@@ -1,6 +1,6 @@
 import { style } from '@vanilla-extract/css'
 
-import { color, spacing, typography } from '@shared/config/theme'
+import { color, shadow, spacing, typography } from '@shared/config/theme'
 import { fontWeight } from '@shared/config/theme/tokens/typography/base'
 
 export const root = style({
@@ -79,6 +79,26 @@ export const subText = style([
   typography.body.sub,
   { color: color.text.tertiary },
 ])
+
+// 표·알림·끝 안내 묶음. 맨 위로 옮길 때 이 칸의 위쪽에 맞춘다. 높이 0인 표식·알림 자리에 간격이
+// 붙지 않게 gap 없이 쌓는다.
+export const list = style({ scrollMarginTop: spacing[16] })
+
+// 새 실패 알림 자리. 높이를 0으로 둬 알림이 나타나고 사라져도 아래 줄을 밀지 않고, 본문 칸 위쪽에
+// 붙어 내려가 읽는 동안에도 보인다.
+export const newDock = style({
+  position: 'sticky',
+  top: spacing[16],
+  zIndex: 1,
+  height: 0,
+  display: 'flex',
+  justifyContent: 'center',
+})
+
+export const newButton = style({ boxShadow: shadow.md })
+
+// 표 끝 안내 — 다음 쪽을 받는 신호를 겸한다.
+export const listEnd = style([subText, { paddingTop: spacing[12] }])
 
 export const link = style({
   color: color.primary.base,

@@ -21,6 +21,7 @@ npm run lint:fix          # eslint . --fix
 npm run storybook         # Storybook dev server on :6006
 npm run format:fix        # prettier --write .
 npm run test              # vitest unit (src/**/*.test.ts)
+npm run test:storybook    # 스토리를 컴포넌트 테스트로 돌림(vitest browser, chromium) — Storybook 화면의 테스트 버튼과 같은 것
 npm run e2e               # Playwright E2E (e2e/*.spec.ts) — MSW를 켠 개발 서버를 :5174에 따로 띄운다
 ```
 

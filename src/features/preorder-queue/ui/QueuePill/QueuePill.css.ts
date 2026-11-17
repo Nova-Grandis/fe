@@ -13,6 +13,11 @@ import {
 const tint = (base: string, percent: number) =>
   `color-mix(in srgb, ${base} ${percent}%, transparent)`
 
+const QUEUE_PILL_HEIGHT = '48px'
+const QUEUE_PILL_GAP = '8px'
+// 모바일에서 콘텐츠를 내릴 높이 — 알약 높이 + 위아래 간격.
+export const QUEUE_PILL_SPACE = `calc(${QUEUE_PILL_HEIGHT} + ${QUEUE_PILL_GAP} * 2)`
+
 // 대기열 모달을 닫으면 화면 위에 떠 있는 알림 — 테마와 상관없이 어두운 유리 바탕이다.
 export const root = style({
   position: 'fixed',
@@ -23,7 +28,7 @@ export const root = style({
   alignItems: 'center',
   gap: '14px',
   maxWidth: `calc(100vw - ${spacing[32]})`,
-  height: '48px',
+  height: QUEUE_PILL_HEIGHT,
   // 글자로 끝나면 좌우를 같게 둔다 — 타이머 칩으로 끝날 때만 오른쪽을 줄인다(border.mine).
   padding: '0 18px',
   boxSizing: 'border-box',
@@ -45,7 +50,12 @@ export const root = style({
     '&:hover': { borderColor: color.primary.subtle },
   },
   '@media': {
-    [breakpoint.mobile]: { gap: spacing[10], padding: `0 ${spacing[14]}` },
+    // 모바일 헤더(52px) 바로 아래에 붙인다. 이 자리만큼 콘텐츠가 내려간다(QUEUE_PILL_SPACE).
+    [breakpoint.mobile]: {
+      top: `calc(52px + ${QUEUE_PILL_GAP})`,
+      gap: spacing[10],
+      padding: `0 ${spacing[14]}`,
+    },
   },
   // 모달이 닫히면서 위에서 살짝 내려와 나타난다.
   '@starting-style': {

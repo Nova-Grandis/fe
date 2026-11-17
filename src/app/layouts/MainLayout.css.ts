@@ -4,6 +4,7 @@ import {
   color,
   breakpoint,
   FIXED_BOTTOM_BAR_VAR,
+  QUEUE_PILL_SPACE_VAR,
   TAB_BAR_HEIGHT,
   TAB_BAR_OFFSET,
 } from '@shared/config/theme'
@@ -33,7 +34,14 @@ export const root = style({
 
 // 페이지를 flex item으로 바로 두면 margin: auto로 가운데 정렬한 페이지(404 등)가 폭이
 // 줄어든다 — 블록 래퍼 안에 두어 페이지 쪽 레이아웃은 그대로 둔다.
-export const content = style({ flex: 1 })
+export const content = style({
+  flex: 1,
+  // 모바일은 헤더가 낮아(52px) 대기열 알약이 페이지 제목 위에 얹힌다 — 알약이 떠 있는 동안
+  // 알약이 적어 둔 높이만큼 콘텐츠를 내린다(QueuePill). 웹은 헤더 아래 여백이 넉넉해 그대로 둔다.
+  '@media': {
+    [breakpoint.mobile]: { paddingTop: `var(${QUEUE_PILL_SPACE_VAR}, 0px)` },
+  },
+})
 
 export const baseBackground = style({
   background: color.background.base,

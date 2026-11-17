@@ -45,6 +45,8 @@ export function PreorderQueue({
       <Modal
         open={queue.isOpen && !queue.isHidden}
         onClose={queue.close}
+        // '대기열 나가기'(줄에서 빠짐)와 헷갈리지 않게, X는 창만 닫고 자리는 지킨다는 걸 이름에 담는다.
+        closeLabel="창 닫기 (순번 유지)"
         // 순번이 한참 남았는데 '곧 이동'이라고 하지 않는다 — 아래 예상 대기('오래 걸림')와 말이 어긋난다.
         title={
           queue.status === 'mine' ? (

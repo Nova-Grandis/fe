@@ -30,8 +30,21 @@ jobs:
         # mermaid + jsdom are optional; they add high-fidelity validation of Mermaid diagrams. Remove if your wiki has none.
         run: npm install --global openwiki@0.5.0 mermaid@11.16.0 jsdom@29.1.1
 
+      - name: Check OpenAI credentials
+        id: credentials
+        run: |
+          if [ -n "${OPENAI_API_KEY}" ]; then
+            echo "has_openai_key=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_openai_key=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Skipping OpenWiki update because OPENAI_API_KEY is not configured."
+          fi
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+
       - name: Run OpenWiki
         id: openwiki
+        if: ${{ steps.credentials.outputs.has_openai_key == 'true' }}
         continue-on-error: true
         run: openwiki code --update --print
         env:
@@ -73,5 +86,5 @@ jobs:
             baseline for the next scheduled run.
 
       - name: Propagate OpenWiki failure
-        if: ${{ steps.openwiki.outcome == 'failure' }}
+        if: ${{ steps.credentials.outputs.has_openai_key == 'true' && steps.openwiki.outcome == 'failure' }}
         run: exit 1

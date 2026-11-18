@@ -17,8 +17,8 @@ export const REPO = {
   label: 'Grandis-Nova',
 }
 
-// ponytail: 시안의 자리표시 값 그대로다 — 실제 팀원 이름·GitHub·담당 기능이 정해지면 여기만 바꾼다.
-const placeholder = (
+// 담당 기능은 저장소(fe·be·mock) PR 기록 기준으로 둘씩만 적는다.
+const member = (
   id: string,
   role: TeamRole,
   name: string,
@@ -34,33 +34,33 @@ const placeholder = (
 })
 
 export const TEAM: TeamMember[] = [
-  placeholder('0', 'Backend', '설승환', 'SH-Seol', [
-    '담당 기능 1',
-    '담당 기능 2',
+  member('0', 'Backend', '설승환', 'SH-Seol', [
+    '결제 승인·복구',
+    '실시간 알림',
   ]),
-  placeholder('1', 'Backend', '김태중', 'taejoong15', [
-    '담당 기능 1',
-    '담당 기능 2',
+  member('1', 'Backend', '김태중', 'taejoong15', [
+    '예약 정합성 검사',
+    'Mock 예약 API',
   ]),
-  placeholder('2', 'Frontend', '김혜진', 'llmeajinll', [
-    '담당 기능 1',
-    '담당 기능 2',
+  member('2', 'Frontend', '김혜진', 'llmeajinll', [
+    '사전예약·대기열·결제 화면',
+    '디자인 토큰·공용 UI',
   ]),
-  placeholder('3', 'Backend', '유희준', 'UHeeJoon', [
-    '담당 기능 1',
-    '담당 기능 2',
+  member('3', 'Backend', '유희준', 'UHeeJoon', [
+    '사전예약 접수·대기열',
+    '입장 속도·용량 조절',
   ]),
-  placeholder('4', 'Frontend', '이주현', 'hana03030', [
-    '담당 기능 1',
-    '담당 기능 2',
+  member('4', 'Frontend', '이주현', 'hana03030', [
+    '운영 대시보드',
+    '예약 현황·외부 예약 대조',
   ]),
-  placeholder('5', 'Backend', '이호성', 'leehosss', [
-    '담당 기능 1',
-    '담당 기능 2',
+  member('5', 'Backend', '이호성', 'leehosss', [
+    '외부 예약 Mock 서버',
+    '지연·실패 주입',
   ]),
-  placeholder('6', 'Backend', '허건', 'HUHGEON', [
-    '담당 기능 1',
-    '담당 기능 2',
+  member('6', 'Backend', '허건', 'HUHGEON', [
+    '상품 카탈로그 API',
+    '조회 읽기 캐시',
   ]),
 ]
 

@@ -116,12 +116,13 @@ export const orderBarContent = style({
   },
 })
 
-// 모바일 전용 — 순차배송 안내를 버튼 줄 위에 보여준다(데스크톱은 옵션 패널의 shipmentNotice로 충분).
+// 모바일 전용 — 순차배송 안내를 옵션 줄 오른쪽에 같이 보여준다(데스크톱은 옵션 패널의 shipmentNotice로 충분).
 export const orderBarShipmentNotice = style([
-  typography.body.defaultMedium,
+  typography.body.subMedium,
   {
+    flexShrink: 0,
     color: color.primary.base,
-    textAlign: 'center',
+    textAlign: 'right',
     '@media': {
       [productDetailBreakpoint.desktop]: {
         display: 'none',
@@ -135,6 +136,14 @@ export const orderBarInfo = style({
   display: 'flex',
   flexDirection: 'column',
   gap: spacing[2],
+})
+
+// 옵션(왼쪽)과 출고 시작일(오른쪽)을 한 줄에 둔다.
+export const orderBarOptionRow = style({
+  display: 'flex',
+  alignItems: 'baseline',
+  justifyContent: 'space-between',
+  gap: spacing[12],
 })
 
 // 모바일 전용 — 수량 스테퍼와 가격을 버튼 줄 위에 양 끝으로 보여준다. 데스크톱은 옵션

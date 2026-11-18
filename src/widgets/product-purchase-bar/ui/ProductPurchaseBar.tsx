@@ -107,16 +107,18 @@ export function ProductPurchaseBar({
             mobilePaddingY={16}
             className={styles.orderBarContent}
           >
-            {isPreorder && shipmentLabel && (
-              <div className={styles.orderBarShipmentNotice}>
-                {shipmentLabel}
-              </div>
-            )}
             <div className={styles.orderBarInfo}>
               <div className={styles.productName}>{productName}</div>
-              <div className={styles.productOption}>
-                <span className={styles.optionPrefix}>옵션 : </span>
-                {colorLabel} · {optionLabel}
+              <div className={styles.orderBarOptionRow}>
+                <div className={styles.productOption}>
+                  <span className={styles.optionPrefix}>옵션 : </span>
+                  {colorLabel} · {optionLabel}
+                </div>
+                {isPreorder && shipmentLabel && (
+                  <div className={styles.orderBarShipmentNotice}>
+                    {shipmentLabel}
+                  </div>
+                )}
               </div>
             </div>
             {isBreakdownOpen && (

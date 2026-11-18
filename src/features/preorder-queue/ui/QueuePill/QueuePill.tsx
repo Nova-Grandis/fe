@@ -1,3 +1,6 @@
+import { useEffect } from 'react'
+
+import { QUEUE_PILL_SPACE_VAR } from '@shared/config/theme'
 import { formatNumber } from '@shared/lib/formatNumber'
 
 import * as styles from './QueuePill.css'
@@ -33,6 +36,15 @@ const MESSAGE: Record<QueueStatus, (myOrder: number | null) => string> = {
 // 닫아 둬도 순번 조회는 계속되므로 자리를 잃지 않는다.
 export function QueuePill({ productName, queue }: QueuePillProps) {
   const { status, myOrder, waitTime, moveIn, checking, reopen } = queue
+
+  // 떠 있는 동안 레이아웃이 모바일 콘텐츠를 알약 자리만큼 내리게 한다(MainLayout content).
+  useEffect(() => {
+    const root = document.documentElement.style
+    root.setProperty(QUEUE_PILL_SPACE_VAR, styles.QUEUE_PILL_SPACE)
+    return () => {
+      root.removeProperty(QUEUE_PILL_SPACE_VAR)
+    }
+  }, [])
 
   // 대기열을 띄우기 전 서버 답을 기다리는 중 — 누를 것이 없어 버튼이 아니라 상태 표시다.
   if (checking)

@@ -27,6 +27,8 @@ export type ModalProps = {
   theme?: 'dark' | 'light'
   /** 기본은 확인 창 폭(400px). 화면 하나를 담을 땐 wide. */
   size?: 'default' | 'wide'
+  /** 오른쪽 위 X 버튼의 이름. 닫아도 진행이 이어지는 창은 그 사실을 이름에 담는다. 기본 '닫기'. */
+  closeLabel?: string
 } & Partial<ModalActionsProps>
 
 // 확인/취소 버튼 줄. onConfirm을 넘기면 Modal이 직접 그리고, 버튼이 내용의 상태(입력값)에
@@ -59,6 +61,7 @@ export function Modal({
   children,
   theme = 'dark',
   size = 'default',
+  closeLabel = '닫기',
   onConfirm,
   onCancel = onClose,
   ...actions
@@ -92,7 +95,8 @@ export function Modal({
       <button
         type="button"
         className={styles.closeButton}
-        aria-label="닫기"
+        aria-label={closeLabel}
+        title={closeLabel}
         onClick={onClose}
       >
         <X aria-hidden="true" size={18} />
